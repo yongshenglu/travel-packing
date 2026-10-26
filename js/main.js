@@ -1,7 +1,7 @@
 /* 入口：启动、事件、同步状态、PWA */
 
 import { loadData, state, saveConfig } from './store.js';
-import { render, handleAction, parseRoute, go, initPoolDrag } from './views.js';
+import { render, handleAction, parseRoute, go, initPoolDrag, ui } from './views.js';
 import { onSyncStatus, scheduleSync, startAutoSync, syncNow, configured, corruptBlocked } from './sync.js';
 
 /* 变更后自动同步的钩子（store.mutate 调用） */
@@ -60,6 +60,13 @@ function bind() {
 
   /* 全局委托：主区域与底部弹层共用同一套 data-action */
   document.addEventListener('click', e => {
+    /* 数量步进器开着时，点它以外的任何地方先收起，
+       不顺带触发勾选、切页等操作；再点一次才是正常操作 */
+    if (ui.qtyEdit && !e.target.closest('.qty-stepper')) {
+      ui.qtyEdit = null;
+      render();
+      return;
+    }
     const el = e.target.closest('[data-action]');
     if (el) handleAction(el.dataset.action, el);
   });
