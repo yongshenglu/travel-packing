@@ -1024,24 +1024,26 @@ export function handleAction(action, el) {
     case 'do-pool-edit': {
       const name = (document.getElementById('pe-name')?.value || '').trim();
       if (!name) return;
-      const toPool = document.querySelector('#pe-seg .active')?.dataset.pePool || el.dataset.pool;
+      const fromPool = el.dataset.pool;
+      const toPool = document.querySelector('#pe-seg .active')?.dataset.pePool || fromPool;
       mutate(d => {
-        const it = d.pools[el.dataset.pool].find(x => x.id === id);
-        if (!it) return;
+        const arr = d.pools[fromPool];
+        const i = arr.findIndex(x => x.id === id);
+        if (i < 0) return;
+        const it = arr[i];
         it.name = name;
-        if (toPool !== el.dataset.pool) {
-          it.deleted = true;
-          it.updatedAt = nowMs();
-          d.pools[toPool].push(newPoolItem(name));
-          renumberPool(pool);
+        it.updatedAt = nowMs();
+        if (toPool !== fromPool) {
+          /* 同一个条目搬过去，保留 id，避免变成另一个新物品 */
+          arr.splice(i, 1);
+          d.pools[toPool].push(it);
+          renumberPool(fromPool);
           renumberPool(toPool);
-        } else {
-          it.updatedAt = nowMs();
         }
       });
       closeSheet();
       render();
-      toast('已保存');
+      toast(toPool === fromPool ? '已保存' : `已移到${POOL_LABEL[toPool]}`);
       return;
     }
 
