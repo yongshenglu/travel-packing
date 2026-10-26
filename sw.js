@@ -3,7 +3,7 @@
    否则手机端会一直读旧缓存。
    另外 index.html 里 <meta name="app-version"> 要一起改成同一个值，
    设置页底部会显示它，用来确认手机拿到的是哪个版本。 */
-const VER = 'tp-v50';
+const VER = 'tp-v51';
 
 const SHELL = [
   './',

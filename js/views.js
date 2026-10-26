@@ -1034,8 +1034,13 @@ export function handleAction(action, el) {
         it.name = name;
         it.updatedAt = nowMs();
         if (toPool !== fromPool) {
-          /* 同一个条目搬过去，保留 id，避免变成另一个新物品 */
+          /* 原池必须留墓碑：合并是按池分别做的，
+             直接移走的话，云端还留着旧记录，一合并就会把它加回来 */
           arr.splice(i, 1);
+          arr.push({
+            id: it.id, name: it.name, order: 0,
+            updatedAt: nowMs(), deleted: true
+          });
           d.pools[toPool].push(it);
           renumberPool(fromPool);
           renumberPool(toPool);
