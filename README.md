@@ -2,9 +2,11 @@
 
 手机端出游打包清单：**必带 / 选带**两个物品池，出发前建一份清单逐项打勾清点，常用的组合可以存成模版反复套用。
 
+**在线使用**：https://yongshenglu.github.io/travel-packing/
+
 纯静态网页，无构建步骤，无第三方依赖，无统计无追踪。
 
-- 页面：公开仓库 → GitHub Pages
+- 页面：公开仓库 [yongshenglu/travel-packing](https://github.com/yongshenglu/travel-packing) → GitHub Pages
 - 数据：保存在你自己 GitHub 账号的**私有仓库**里，也可只存在本机
 
 ---
