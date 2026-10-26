@@ -219,7 +219,10 @@ export const state = {
   data: null,
   config: null,
   meta: null,
-  dirty: false
+  dirty: false,
+  /* 本机数据是否含历史乱码（旧版本解码 bug 造成）。为 true 时禁止同步，
+     否则会把乱码推上去污染云端 */
+  corrupt: false
 };
 
 function defaultConfig() {
@@ -237,12 +240,20 @@ function defaultMeta() {
   return { dirty: false, lastSyncAt: null, lastSyncSha: null, status: 'local' };
 }
 
+/* 旧版本解码 bug 会把中文变成 Ã¥Â 之类的乱码，特征很明显 */
+const MOJIBAKE = /\uFFFD|[\u0080-\u009f]|[\u00c2\u00c3][\u0080-\u00bf]/;
+
+export function looksCorrupt(obj) {
+  try { return MOJIBAKE.test(JSON.stringify(obj)); } catch (e) { return false; }
+}
+
 export function loadData() {
   const stored = readJSON(LS.data, null);
   state.data = stored ? sanitizeData(stored) : freshData();
   state.config = Object.assign(defaultConfig(), readJSON(LS.config, {}));
   state.meta = Object.assign(defaultMeta(), readJSON(LS.meta, {}));
   state.dirty = !!state.meta.dirty;
+  state.corrupt = looksCorrupt(state.data);
   if (!stored) saveData();
 }
 

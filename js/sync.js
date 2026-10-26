@@ -41,6 +41,11 @@ export function configured() {
   return !!(c && c.owner && c.repo && c.token);
 }
 
+/* 本机数据含历史乱码时禁止同步，否则会把乱码推上去污染云端 */
+export function corruptBlocked() {
+  return !!state.corrupt;
+}
+
 function headers() {
   const h = {
     'Accept': 'application/vnd.github+json',
@@ -70,24 +75,6 @@ async function api(path, opts = {}) {
   throw err(API_MSG[resp.status] || `请求失败 (${resp.status})`, resp.status);
 }
 
-async function fetchRemote() {
-  let j;
-  try {
-    j = await api(contentsPath());
-  } catch (e) {
-    if (e.status === 404) return { notFound: true, sha: null, data: null };
-    throw e;
-  }
-  if (!j.content) throw err('云端文件过大，无法读取');
-  let data;
-  try {
-    data = sanitizeData(JSON.parse(atob(String(j.content).replace(/\s+/g, ''))));
-  } catch (e) {
-    throw err('云端数据格式异常');
-  }
-  return { notFound: false, sha: j.sha, data };
-}
-
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
   let bin = '';
@@ -97,23 +84,81 @@ function utf8ToBase64(str) {
   return btoa(bin);
 }
 
+/* atob 给出的是「每字符一个字节」的二进制串，不是 UTF-8 文本。
+   必须先还原成字节再用 TextDecoder 解码，否则中文会变成乱码。 */
+function base64ToUtf8(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/* 旧版本直接把 atob 的结果当文本用了，中文每同步一轮就再劣化一次。
+   这里反复按「字符码当字节再解 UTF-8」反解，直到能正常解析。 */
+const MOJIBAKE = /\uFFFD|[\u0080-\u009f]|[\u00c2\u00c3][\u0080-\u00bf]/;
+
+function parseCloudJson(text) {
+  for (let i = 0; i <= 3; i++) {
+    if (!MOJIBAKE.test(text)) {
+      try { return JSON.parse(text); } catch (e) { /* 下面尝试反解 */ }
+    }
+    const bytes = new Uint8Array(text.length);
+    for (let j = 0; j < text.length; j++) bytes[j] = text.charCodeAt(j) & 0xff;
+    const next = new TextDecoder('utf-8').decode(bytes);
+    if (next === text) break;
+    text = next;
+  }
+  throw err('云端数据格式异常');
+}
+
+async function fetchRemote() {
+  let meta;
+  try {
+    meta = await api(contentsPath());
+  } catch (e) {
+    if (e.status === 404) return { notFound: true, sha: null, data: null };
+    throw e;
+  }
+
+  let text;
+  if (meta.content) {
+    text = base64ToUtf8(String(meta.content).replace(/\s+/g, ''));
+  } else {
+    const resp = await fetch(API + contentsPath(), {
+      headers: Object.assign({}, headers(), { 'Accept': 'application/vnd.github.raw' })
+    });
+    if (!resp.ok) throw err(API_MSG[resp.status] || `请求失败 (${resp.status})`, resp.status);
+    text = await resp.text();
+  }
+
+  let data;
+  try {
+    data = sanitizeData(parseCloudJson(text));
+  } catch (e) {
+    throw e.status ? e : err('云端数据格式异常');
+  }
+  return { notFound: false, sha: meta.sha, data };
+}
+
 async function pushRemote(data, sha) {
+  /* 推送前丢掉过期墓碑，否则删除记录会把文件越撑越大 */
   const body = {
     message: '同步行李清单数据',
-    content: utf8ToBase64(JSON.stringify(data, null, 2))
+    content: utf8ToBase64(JSON.stringify(pruneTombstones(data), null, 2))
   };
   if (sha) body.sha = sha;
   const j = await api(contentsPath(), { method: 'PUT', body });
   return j.content.sha;
 }
 
-function serialize(d) {
-  return JSON.stringify(pruneTombstones(d));
-}
-
 /* 主流程：拉取 → 合并 → 落地 → 需要时推送 */
 async function doSync({ successToast = false, quiet = false } = {}) {
   if (!configured() || syncing) return;
+  if (corruptBlocked()) {
+    emit('error', '本机数据有乱码，同步已暂停');
+    if (!quiet) toast('本机数据含旧版乱码，已暂停同步以免污染云端');
+    return;
+  }
   syncing = true;
   emit('syncing');
   try {
@@ -197,7 +242,7 @@ export async function pullOnly() {
 }
 
 export function startAutoSync() {
-  if (!configured()) return;
+  if (!configured() || corruptBlocked()) return;
   doSync({ quiet: true });
 
   window.addEventListener('online', () => {

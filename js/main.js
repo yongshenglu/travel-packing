@@ -2,7 +2,7 @@
 
 import { loadData, state, saveConfig } from './store.js';
 import { render, handleAction, parseRoute, go, initPoolDrag } from './views.js';
-import { onSyncStatus, scheduleSync, startAutoSync, syncNow, configured } from './sync.js';
+import { onSyncStatus, scheduleSync, startAutoSync, syncNow, configured, corruptBlocked } from './sync.js';
 
 /* 变更后自动同步的钩子（store.mutate 调用） */
 window.__scheduleSync = scheduleSync;
@@ -15,6 +15,11 @@ function setSyncChip(status) {
   if (!configured()) {
     chip.dataset.state = 'offline';
     text.textContent = '仅本机';
+    return;
+  }
+  if (corruptBlocked()) {
+    chip.dataset.state = 'error';
+    text.textContent = '数据异常';
     return;
   }
   const map = {

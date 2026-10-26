@@ -10,7 +10,7 @@ import {
   esc, toast, fmtCNDate, fmtCNStamp, fmtCNStampTime, todayISO, uuid, nowMs,
   openSheet, closeSheet, confirmDialog
 } from './ui.js';
-import { configured, syncNow, pullOnly, testRepo, startAutoSync } from './sync.js';
+import { configured, syncNow, pullOnly, testRepo, startAutoSync, corruptBlocked } from './sync.js';
 
 const RING_C = 2 * Math.PI * 36;
 
@@ -264,7 +264,14 @@ function viewTemplate(id) {
 function viewSettings() {
   const c = state.config;
   const on = configured();
+  const corrupt = corruptBlocked();
   return `
+    ${corrupt ? `<div class="notice danger-notice">
+      <b>本机数据含乱码，同步已暂停</b><br>
+      旧版本解码有缺陷，把中文存成了 Ã¥Â 之类的乱码，且已经无法自动还原。
+      同步已自动暂停，避免把乱码推到云端。<br><br>
+      处理办法：先「导出 JSON」留个底，再点「清空本机数据」，之后重新同步即可从云端拉到干净数据。
+    </div>` : ''}
     <div class="notice">
       <b>隐私说明</b><br>
       访问令牌只保存在本机浏览器，不会上传到任何第三方服务器。

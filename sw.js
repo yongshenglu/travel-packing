@@ -1,7 +1,7 @@
 /* Service Worker
    注意：每次改动 HTML/CSS/JS 后，必须递增下面的 VER，
    否则手机端会一直读旧缓存。 */
-const VER = 'tp-v45';
+const VER = 'tp-v46';
 
 const SHELL = [
   './',

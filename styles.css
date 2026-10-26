@@ -1100,6 +1100,10 @@ html, body {
   margin-bottom: 14px;
 }
 .notice b { font-weight: 650; }
+.notice.danger-notice {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 
 .set-card {
   background: var(--paper);
