@@ -1,7 +1,9 @@
 /* Service Worker
    注意：每次改动 HTML/CSS/JS 后，必须递增下面的 VER，
-   否则手机端会一直读旧缓存。 */
-const VER = 'tp-v46';
+   否则手机端会一直读旧缓存。
+   另外 index.html 里 <meta name="app-version"> 要一起改成同一个值，
+   设置页底部会显示它，用来确认手机拿到的是哪个版本。 */
+const VER = 'tp-v47';
 
 const SHELL = [
   './',

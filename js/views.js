@@ -314,7 +314,13 @@ function viewSettings() {
       ${hasCustomPreset() ? '<button class="btn ghost block" data-action="clear-preset">回到内置预设</button>' : ''}
       <button class="btn danger block" data-action="clear">清空本机数据</button>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
-    </div>`;
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">当前版本 ${esc(appVersion())}</p>`;
+}
+
+/* 版本号取自 index.html 的 meta，发版时和 sw.js 的 VER 一起改 */
+function appVersion() {
+  return document.querySelector('meta[name="app-version"]')?.content || '未知';
 }
 
 function escapeSyncInfo() {
